@@ -1,9 +1,10 @@
 # Muni LED display
+import argparse
+import time
+import os
 import urllib
 import urllib2
-import os
 from xml.dom import minidom
-from time import sleep
 import LPD8806
 
 # Can be used for testing without the LED strip connected
@@ -26,13 +27,16 @@ class ConsoleStrip(LPD8806.LEDStrip):
 		os.system('clear')
 		print ''.join(line)
 
-def main():
-	led_strip = ConsoleStrip(160)#LPD8806.LEDStrip(160)
+def main(args):
+	if (args.display == 'led'):
+		led_strip = LPD8806.LEDStrip(160)
+	elif args.display == 'console':
+		led_strip = ConsoleStrip(160)	
 	led_strip.all_off()
 
 	while True:
 		update(led_strip)
-		sleep(5.0)
+		time.sleep(5.0)
 
 
 def get_predictions(route, stop_id):
@@ -78,4 +82,9 @@ def update(led_strip=None):
 	led_strip.update()
 
 if __name__ == "__main__":
-    main()
+	parser = argparse.ArgumentParser(description='Muni trains on a LED strip.')
+	parser.add_argument('-d', '--display', choices=['led', 'console'],
+						default='led', dest='display',
+                   		help='Where to display muni stops.')
+	args = parser.parse_args()
+	main(args)
