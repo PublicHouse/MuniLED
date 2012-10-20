@@ -1,0 +1,81 @@
+# Muni LED display
+import urllib
+import urllib2
+import os
+from xml.dom import minidom
+from time import sleep
+import LPD8806
+
+# Can be used for testing without the LED strip connected
+class ConsoleStrip(LPD8806.LEDStrip):
+	def __init__(self, leds, dev=None):
+		LPD8806.LEDStrip.__init__(self, leds, '/dev/null')
+
+	def update(self):
+		line = []
+		for x in range(self.leds):
+			r = self.buffer[x][self.c_order[0]]
+			g = self.buffer[x][self.c_order[1]]
+			b = self.buffer[x][self.c_order[2]]
+			if r == 255:
+				line.append('S')
+			elif r == 134:
+				line.append('T')
+			else:
+				line.append('_')
+		os.system('clear')
+		print ''.join(line)
+
+def main():
+	led_strip = ConsoleStrip(160)#LPD8806.LEDStrip(160)
+	led_strip.all_off()
+
+	while True:
+		update(led_strip)
+		sleep(5.0)
+
+
+def get_predictions(route, stop_id):
+	base_url = 'http://webservices.nextbus.com/service/publicXMLFeed'
+	params = {
+		'command': 'predictions',
+		'a': 'sf-muni',
+		'r': route,
+		's': stop_id,
+		'useShortTitles': 'true'
+	}
+	response = urllib2.urlopen('{url}?{params}'.format(
+		url=base_url,
+		params=urllib.urlencode(params)))
+	dom = minidom.parse(response)
+	predictions = dom.getElementsByTagName('prediction')
+	return [int(p.attributes['minutes'].value) for p in predictions]
+
+
+def update(led_strip=None):
+	line = [False for i in range(led_strip.leds)]
+
+	# inbound
+	for prediction in get_predictions('N', 3915):
+		line[80 - prediction - 1] = True
+
+	# outbound
+	for prediction in get_predictions('N', 3914):
+		line[80 + prediction] = True
+
+	# set train leds
+	for i in range(led_strip.leds):
+		if line[i]:
+			led_strip.setHSV(i, 225, .7, 1)
+		else:
+			led_strip.setHSV(i, 0, 0, 0)
+
+	# set station leds
+	led_strip.setHSV(79, 320, .7, 1)
+	led_strip.setHSV(80, 320, .7, 1)
+
+	# Update the strip
+	led_strip.update()
+
+if __name__ == "__main__":
+    main()
