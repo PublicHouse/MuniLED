@@ -34,9 +34,13 @@ def main(args):
 		led_strip = ConsoleStrip(160)	
 	led_strip.all_off()
 
-	while True:
-		update(led_strip)
-		time.sleep(5.0)
+	try:
+		while True:
+			update(led_strip)
+			time.sleep(5.0)
+	except:
+		led_strip.all_off()
+		raise
 
 
 def get_predictions(route, stop_id):
