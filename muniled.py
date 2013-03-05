@@ -35,21 +35,14 @@ def main(args):
 	led_strip.all_off()
 	try:
 		while True:
-			try:
-				update(led_strip)
-			except urllib2.URLError, e:	
-				print e.reason
-				pass
-			except:
-				raise
-			finally:
-				time.sleep(5.0)
+			update(led_strip)	
+			time.sleep(5.0)
 	except:
 		led_strip.all_off()
 		raise
 
 
-def get_predictions(route, stop_id):
+def get_predictions(route, stop_id, led_strip):
 	base_url = 'http://webservices.nextbus.com/service/publicXMLFeed'
 	params = {
 		'command': 'predictions',
@@ -58,9 +51,20 @@ def get_predictions(route, stop_id):
 		's': stop_id,
 		'useShortTitles': 'true'
 	}
-	response = urllib2.urlopen('{url}?{params}'.format(
-		url=base_url,
-		params=urllib.urlencode(params)))
+
+	# attempt to fetch and retry on error after a pause
+	while True:
+		try:
+			response = urllib2.urlopen('{url}?{params}'.format(
+				url=base_url,
+				params=urllib.urlencode(params)))
+			break
+		except urllib2.URLError, e:	
+			print e.reason
+			dim(led_strip)
+			time.sleep(5.0)
+			pass
+
 	dom = minidom.parse(response)
 	predictions = dom.getElementsByTagName('prediction')
 	return [int(p.attributes['minutes'].value) for p in predictions]
@@ -70,11 +74,11 @@ def update(led_strip=None):
 	line = [False for i in range(led_strip.leds)]
 
 	# inbound
-	for prediction in get_predictions('N', 3915):
+	for prediction in get_predictions('N', 3915, led_strip):
 		line[80 - prediction - 1] = True
 
 	# outbound
-	for prediction in get_predictions('N', 3914):
+	for prediction in get_predictions('N', 3914, led_strip):
 		line[80 + prediction] = True
 
 	# set train leds
@@ -90,6 +94,12 @@ def update(led_strip=None):
 
 	# Update the strip
 	led_strip.update()
+
+def dim(led_strip):
+	# dim all the leds a little
+	# TODO
+	pass
+
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description='Muni trains on a LED strip.')
