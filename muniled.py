@@ -33,11 +33,17 @@ def main(args):
 	elif args.display == 'console':
 		led_strip = ConsoleStrip(160)	
 	led_strip.all_off()
-
 	try:
 		while True:
-			update(led_strip)
-			time.sleep(5.0)
+			try:
+				update(led_strip)
+			except urllib2.URLError, e:	
+				print e.reason
+				pass
+			except:
+				raise
+			finally:
+				time.sleep(5.0)
 	except:
 		led_strip.all_off()
 		raise
